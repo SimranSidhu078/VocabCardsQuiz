@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VocabApp</title>
+    <title>VocabApp Pro</title>
     <style>
         :root {
             --ios-blue: #007AFF;
@@ -31,12 +31,12 @@
             flex-direction: column;
             align-items: center;
             min-height: 100vh;
-            padding: 0 0 80px 0; /* Space for bottom tab bar */
+            padding: 0 0 80px 0;
         }
 
         .app-container {
             width: 100%;
-            max-width: 430px; /* Standard iPhone Max Width */
+            max-width: 430px;
             padding: 20px 16px;
         }
 
@@ -55,7 +55,6 @@
             margin-bottom: 16px;
         }
 
-        /* iOS native form rows */
         .ios-list {
             background: var(--ios-surface);
             border-radius: 10px;
@@ -91,10 +90,8 @@
             cursor: pointer;
             -webkit-appearance: none;
             padding-right: 16px;
-            position: relative;
         }
 
-        /* Bottom Tab Bar Navigation */
         .tab-bar {
             position: fixed;
             bottom: 0;
@@ -143,11 +140,11 @@
             display: block;
         }
 
-        /* Flashcard Component */
+        /* Flashcard Styling */
         .flashcard-wrapper {
             perspective: 1000px;
             width: 100%;
-            height: 340px;
+            height: 300px;
             margin: 20px 0;
             cursor: pointer;
         }
@@ -210,6 +207,25 @@
             padding: 0 8px;
         }
 
+        .card-order-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn-secondary {
+            flex: 1;
+            background: var(--ios-surface);
+            border: 0.5px solid var(--ios-separator);
+            color: var(--ios-blue);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+        }
+
         .nav-btn {
             background: var(--ios-surface);
             border: none;
@@ -222,7 +238,6 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        /* Native iOS Buttons */
         .ios-btn-primary {
             width: 100%;
             padding: 14px;
@@ -236,7 +251,7 @@
             text-align: center;
         }
 
-        /* Quiz Styling */
+        /* Quiz UI Elements */
         .score-tracker {
             display: flex;
             justify-content: space-between;
@@ -286,6 +301,29 @@
             font-weight: 600;
         }
 
+        /* Score Display Dashboard */
+        .results-card {
+            background: var(--ios-surface);
+            border-radius: 14px;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+        }
+
+        .results-score {
+            font-size: 64px;
+            font-weight: 800;
+            color: var(--ios-blue);
+            margin: 10px 0;
+        }
+
+        .results-meta {
+            font-size: 17px;
+            color: var(--ios-secondary-text);
+            margin-bottom: 20px;
+        }
+
         .meta-info {
             text-align: center;
             font-size: 15px;
@@ -317,6 +355,11 @@
                         <option value="not">Starts Without Selection</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="card-order-controls">
+                <button class="btn-secondary" onclick="shuffleCards()">🔀 Shuffle Order</button>
+                <button class="btn-secondary" onclick="resetCardOrder()">🔄 Default Order</button>
             </div>
 
             <div id="card-container-ui">
@@ -391,6 +434,15 @@
                 <button class="ios-btn-primary hidden" id="quiz-next-btn" style="margin-top: 24px;" onclick="nextQuizQuestion()">Next Question</button>
                 <button class="nav-btn" style="margin-top: 16px; width: 100%; text-align: center; box-shadow: none;" onclick="exitQuiz()">End Quiz</button>
             </div>
+
+            <div id="quiz-results-ui" class="hidden">
+                <div class="results-card">
+                    <h2>Quiz Completed!</h2>
+                    <div class="results-score" id="results-percentage">0%</div>
+                    <div class="results-meta" id="results-raw-fraction">You answered 0 out of 0 questions correctly.</div>
+                    <button class="ios-btn-primary" onclick="exitQuiz()">Return to Config</button>
+                </div>
+            </div>
         </section>
     </div>
 
@@ -408,7 +460,7 @@
     <script>
         // =========================================================================
         // PLACEHOLDER FOR VOCABULARY DATA
-        // Paste your generated JSON file contents directly inside the braces below.
+        // Insert dictionary elements directly inside this container object module
         // =========================================================================
         const vocabData ={
   "à côté": "near",
@@ -1254,7 +1306,7 @@
         let filteredCards = [];
         let currentCardIndex = 0;
 
-        // Quiz State Parameters
+        // Quiz Variable Cache Pools
         let quizPool = [];
         let quizIndex = 0;
         let quizCorrectCount = 0;
@@ -1304,11 +1356,9 @@
         }
 
         function getCleanStartingChar(str) {
-            // strip accents/symbols to identify base alphabetical character accurately
             return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/^[\W_]+/, "").toLowerCase().charAt(0);
         }
 
-        /* Filter Algorithm */
         function filterWords(list, targetLetter, condition) {
             if (targetLetter === 'all') return [...list];
             
@@ -1319,8 +1369,25 @@
             });
         }
 
-        /* Flashcard Logic Interface */
+        /* Flashcard Core Operations Engine */
         function applyCardFilter() {
+            const letter = document.getElementById('card-filter-letter').value;
+            const condition = document.getElementById('card-filter-condition').value;
+            
+            filteredCards = filterWords(structuredList, letter, condition);
+            currentCardIndex = 0;
+            renderCard();
+        }
+
+        function shuffleCards() {
+            if (filteredCards.length <= 1) return;
+            filteredCards.sort(() => Math.random() - 0.5);
+            currentCardIndex = 0;
+            renderCard();
+        }
+
+        function resetCardOrder() {
+            // Re-evaluates default raw position array indexes patterns from core definitions tracking maps
             const letter = document.getElementById('card-filter-letter').value;
             const condition = document.getElementById('card-filter-condition').value;
             
@@ -1362,7 +1429,7 @@
             renderCard();
         }
 
-        /* Quiz Engine Logic */
+        /* Quiz Engine Module */
         function startQuiz() {
             const letter = document.getElementById('quiz-filter-letter').value;
             const condition = document.getElementById('quiz-filter-condition').value;
@@ -1375,7 +1442,6 @@
                 return;
             }
 
-            // Shuffle matching list pool
             pool.sort(() => Math.random() - 0.5);
 
             if(sizeLimit !== 'unlimited') {
@@ -1389,48 +1455,43 @@
             quizTotalAnswered = 0;
 
             document.getElementById('quiz-setup-ui').classList.add('hidden');
+            document.getElementById('quiz-results-ui').classList.add('hidden');
             document.getElementById('quiz-play-ui').classList.remove('hidden');
             
             showQuizQuestion();
         }
 
-       function showQuizQuestion() {
-    document.getElementById('quiz-next-btn').classList.add('hidden');
-    const item = quizPool[quizIndex];
-    
-    document.getElementById('quiz-progress').innerText = `Question ${quizIndex + 1} of ${quizPool.length}`;
-    updateScoreUI();
+        function showQuizQuestion() {
+            document.getElementById('quiz-next-btn').classList.add('hidden');
+            const item = quizPool[quizIndex];
+            
+            document.getElementById('quiz-progress').innerText = `Question ${quizIndex + 1} of ${quizPool.length}`;
+            updateScoreUI();
 
-    document.getElementById('quiz-question-text').innerText = `How do you say "${item.english}" in French?`;
-    currentCorrectAnswer = item.french;
+            document.getElementById('quiz-question-text').innerText = `How do you say "${item.english}" in French?`;
+            currentCorrectAnswer = item.french;
 
-    // FIX: Generate wrong options strictly from the already-filtered quiz pool 
-    // instead of the master structuredList.
-    let answersPool = [item.french];
-    let optionsLeft = quizPool.filter(v => v.french !== item.french);
-    
-    // Randomize the valid distractors
-    optionsLeft.sort(() => Math.random() - 0.5);
+            // Extract isolated parameters only inside filtered set boundaries
+            let answersPool = [item.french];
+            let optionsLeft = quizPool.filter(v => v.french !== item.french);
+            optionsLeft.sort(() => Math.random() - 0.5);
 
-    // Fill up to 3 wrong options from the filtered pool
-    for(let i = 0; i < Math.min(3, optionsLeft.length); i++) {
-        answersPool.push(optionsLeft[i].french);
-    }
-    
-    // Shuffle the final options so the correct answer isn't always first
-    answersPool.sort(() => Math.random() - 0.5);
+            for(let i = 0; i < Math.min(3, optionsLeft.length); i++) {
+                answersPool.push(optionsLeft[i].french);
+            }
+            answersPool.sort(() => Math.random() - 0.5);
 
-    const optionsContainer = document.getElementById('quiz-options-container');
-    optionsContainer.innerHTML = '';
+            const optionsContainer = document.getElementById('quiz-options-container');
+            optionsContainer.innerHTML = '';
 
-    answersPool.forEach(choiceText => {
-        let btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.innerText = choiceText;
-        btn.onclick = function() { verifySelection(btn, choiceText); };
-        optionsContainer.appendChild(btn);
-    });
-}
+            answersPool.forEach(choiceText => {
+                let btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = choiceText;
+                btn.onclick = function() { verifySelection(btn, choiceText); };
+                optionsContainer.appendChild(btn);
+            });
+        }
 
         function verifySelection(selectedBtn, chosenText) {
             const options = document.querySelectorAll('#quiz-options-container .option-btn');
@@ -1449,13 +1510,13 @@
 
             updateScoreUI();
             
+            // Wait validation step delay before sorting path trajectories
             if(quizIndex < quizPool.length - 1) {
                 document.getElementById('quiz-next-btn').classList.remove('hidden');
             } else {
                 setTimeout(() => {
-                    alert(`Session End.\nScore: ${quizCorrectCount} / ${quizPool.length} answers correct.`);
-                    exitQuiz();
-                }, 1000);
+                    displayFinalScoreboard();
+                }, 800);
             }
         }
 
@@ -1469,9 +1530,20 @@
             document.getElementById('quiz-score').innerText = `Score: ${quizCorrectCount} (${percentage}%)`;
         }
 
+        function displayFinalScoreboard() {
+            document.getElementById('quiz-play-ui').classList.add('hidden');
+            document.getElementById('quiz-results-ui').classList.remove('hidden');
+
+            let finalPct = quizPool.length === 0 ? 0 : Math.round((quizCorrectCount / quizPool.length) * 100);
+            
+            document.getElementById('results-percentage').innerText = `${finalPct}%`;
+            document.getElementById('results-raw-fraction').innerText = `You answered ${quizCorrectCount} out of ${quizPool.length} questions correctly.`;
+        }
+
         function exitQuiz() {
             document.getElementById('quiz-setup-ui').classList.remove('hidden');
             document.getElementById('quiz-play-ui').classList.add('hidden');
+            document.getElementById('quiz-results-ui').classList.add('hidden');
         }
     </script>
 </body>
