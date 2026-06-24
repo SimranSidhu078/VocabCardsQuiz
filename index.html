@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VocabApp</title>
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-green: #34C759;
+            --ios-red: #FF3B30;
+            --ios-background: #F2F2F7;
+            --ios-surface: #FFFFFF;
+            --ios-text: #000000;
+            --ios-secondary-text: #8E8E93;
+            --ios-separator: #C6C6C8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--ios-background);
+            color: var(--ios-text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 0 0 80px 0; /* Space for bottom tab bar */
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 430px; /* Standard iPhone Max Width */
+            padding: 20px 16px;
+        }
+
+        h1 {
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 20px;
+            padding-left: 4px;
+        }
+
+        h2 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.4px;
+            margin-bottom: 16px;
+        }
+
+        /* iOS native form rows */
+        .ios-list {
+            background: var(--ios-surface);
+            border-radius: 10px;
+            margin-bottom: 24px;
+            overflow: hidden;
+            border: 0.5px solid rgba(0,0,0,0.1);
+        }
+
+        .ios-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 0.5px solid var(--ios-separator);
+        }
+
+        .ios-row:last-child {
+            border-bottom: none;
+        }
+
+        .ios-label {
+            font-size: 17px;
+            font-weight: 400;
+        }
+
+        select {
+            font-size: 17px;
+            color: var(--ios-blue);
+            border: none;
+            background: transparent;
+            outline: none;
+            text-align: right;
+            cursor: pointer;
+            -webkit-appearance: none;
+            padding-right: 16px;
+            position: relative;
+        }
+
+        /* Bottom Tab Bar Navigation */
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 430px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 0.5px solid var(--ios-separator);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: none;
+            border: none;
+            color: var(--ios-secondary-text);
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 50%;
+        }
+
+        .tab-item.active {
+            color: var(--ios-blue);
+        }
+
+        .tab-icon {
+            font-size: 22px;
+            margin-bottom: 3px;
+        }
+
+        .view-section {
+            display: none;
+            width: 100%;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        /* Flashcard Component */
+        .flashcard-wrapper {
+            perspective: 1000px;
+            width: 100%;
+            height: 340px;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            border-radius: 14px;
+            background: var(--ios-surface);
+            text-align: center;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background: #F4F3FF;
+            color: var(--ios-blue);
+        }
+
+        .card-title {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--ios-secondary-text);
+            position: absolute;
+            top: 24px;
+        }
+
+        .card-word {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 0 8px;
+        }
+
+        .nav-btn {
+            background: var(--ios-surface);
+            border: none;
+            color: var(--ios-blue);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* Native iOS Buttons */
+        .ios-btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: var(--ios-blue);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* Quiz Styling */
+        .score-tracker {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 4px 12px 4px;
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--ios-secondary-text);
+        }
+
+        .quiz-question {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            margin: 24px 0;
+            text-align: center;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--ios-surface);
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 500;
+            text-align: left;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: background 0.1s;
+        }
+
+        .option-btn.correct {
+            background-color: var(--ios-green) !important;
+            color: white;
+            font-weight: 600;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--ios-red) !important;
+            color: white;
+            font-weight: 600;
+        }
+
+        .meta-info {
+            text-align: center;
+            font-size: 15px;
+            color: var(--ios-secondary-text);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <section id="flashcards-section" class="view-section active">
+            <h1>Flashcards</h1>
+            
+            <div class="ios-list">
+                <div class="ios-row">
+                    <span class="ios-label">Target Alphabet</span>
+                    <select id="card-filter-letter" onchange="applyCardFilter()">
+                        <option value="all">All Letters</option>
+                    </select>
+                </div>
+                <div class="ios-row">
+                    <span class="ios-label">Condition</span>
+                    <select id="card-filter-condition" onchange="applyCardFilter()">
+                        <option value="equals">Starts With Selection</option>
+                        <option value="not">Starts Without Selection</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="card-container-ui">
+                <div class="flashcard-wrapper" onclick="toggleCardFlip()">
+                    <div class="flashcard" id="flashcard-element">
+                        <div class="card-face card-front">
+                            <div class="card-title">French</div>
+                            <div class="card-word" id="card-front-text">Loading...</div>
+                        </div>
+                        <div class="card-face card-back">
+                            <div class="card-title">English Translation</div>
+                            <div class="card-word" id="card-back-text">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="nav-btn" onclick="navigateCard(-1)">Previous</button>
+                    <span id="card-counter" class="meta-info">0 / 0</span>
+                    <button class="nav-btn" onclick="navigateCard(1)">Next</button>
+                </div>
+            </div>
+            <div id="card-empty-msg" class="meta-info hidden" style="padding: 60px 0;">No words match your filters.</div>
+        </section>
+
+        <section id="quiz-section" class="view-section">
+            <h1>Quiz</h1>
+
+            <div id="quiz-setup-ui">
+                <h2>Quiz Configuration</h2>
+                <div class="ios-list">
+                    <div class="ios-row">
+                        <span class="ios-label">Target Alphabet</span>
+                        <select id="quiz-filter-letter">
+                            <option value="all">All Letters</option>
+                        </select>
+                    </div>
+                    <div class="ios-row">
+                        <span class="ios-label">Condition</span>
+                        <select id="quiz-filter-condition">
+                            <option value="equals">Starts With Selection</option>
+                            <option value="not">Starts Without Selection</option>
+                        </select>
+                    </div>
+                    <div class="ios-row">
+                        <span class="ios-label">Session Length</span>
+                        <select id="quiz-size-limit">
+                            <option value="10">10 Questions</option>
+                            <option value="20">20 Questions</option>
+                            <option value="50">50 Questions</option>
+                            <option value="unlimited">All Matching Words</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="ios-btn-primary" onclick="startQuiz()">Start Session</button>
+            </div>
+
+            <div id="quiz-play-ui" class="hidden">
+                <div class="score-tracker">
+                    <span id="quiz-progress">Question 1 of 10</span>
+                    <span id="quiz-score">Score: 0 (0%)</span>
+                </div>
+
+                <div class="quiz-question" id="quiz-question-text">
+                    How do you say "Word" in French?
+                </div>
+
+                <div class="quiz-options" id="quiz-options-container">
+                    </div>
+                
+                <button class="ios-btn-primary hidden" id="quiz-next-btn" style="margin-top: 24px;" onclick="nextQuizQuestion()">Next Question</button>
+                <button class="nav-btn" style="margin-top: 16px; width: 100%; text-align: center; box-shadow: none;" onclick="exitQuiz()">End Quiz</button>
+            </div>
+        </section>
+    </div>
+
+    <nav class="tab-bar">
+        <button class="tab-item active" id="tab-flashcards" onclick="switchTab('flashcards')">
+            <span class="tab-icon">📇</span>
+            <span>Cards</span>
+        </button>
+        <button class="tab-item" id="tab-quiz" onclick="switchTab('quiz')">
+            <span class="tab-icon">⏱️</span>
+            <span>Quiz</span>
+        </button>
+    </nav>
+
+    <script>
+        // =========================================================================
+        // PLACEHOLDER FOR VOCABULARY DATA
+        // Paste your generated JSON file contents directly inside the braces below.
+        // =========================================================================
+        const vocabData ={
+  "à côté": "near",
+  "à droite": "on/to the right",
+  "à gauche": "on/to the left",
+  "à pied": "on foot",
+  "à vélo": "by bike",
+  "abdo(minaux) (des)": "abdominals",
+  "absolument": "absolutely",
+  "accepter (v.)": "to accept",
+  "accessoire (un)": "accessory (an)",
+  "accueil (1 )": "reception (the)",
+  "achat (un)": "purchase (a)",
+  "activité (une)": "activity (an)",
+  "addition (une)": "bill (a)",
+  "administration (1')": "administration/\n management (the)",
+  "adorable (adj.)": "adorable",
+  "adorer": "to adore",
+  "aéroport (un)": "airport (an)",
+  "âge (un)": "age (an)",
+  "agence immobilière\n (une)": "estate agency (an)",
+  "agréable (adj.)": "pleasant",
+  "aider (v.)": "to help",
+  "ail (1)": "garlic (the)",
+  "aimer (v.)": "to love/to like",
+  "ajouter (v.)": "to add",
+  "allée (une)": "alleyway (an), path (a)",
+  "aller (v.)": "to go",
+  "alternance (1')": "work experience (the)",
+  "alternant/e\n $(un/une)$": "work experience\n student (a)",
+  "ami(e) (un/une)": "friend (a)",
+  "ampoule (une)": "light bulb (a)",
+  "analyser (v.)": "to analyse",
+  "ancien/ne (adj.)": "former",
+  "animation (une)": "entertainment/activity\n (an)",
+  "animé(e) (adj).": "busy/lively",
+  "animer (v.)": "to present",
+  "annonce (une)": "advert (an)",
+  "antibiotique (un)": "antibiotic (an)",
+  "août": "August",
+  "apéritif (un)": "aperitif (an)/drink\n before a meal (a)",
+  "apparence (1')": "appearance (the)",
+  "appartement (un)": "flat (a)",
+  "applaudir (v.)": "to applaud",
+  "appréciation (une)": "appreciation (an)",
+  "apprendre (v.)": "to learn",
+  "après": "after",
+  "après-midi (1')": "afternoon (the)",
+  "arbre généalogique\n (un)": "family tree (a)",
+  "architecture (1')": "architecture (the)",
+  "ardoise (une)": "slate (a)",
+  "armoire (une)": "cupboard (a)",
+  "arrêt de bus (un)": "bus stop (a)",
+  "arrêter (v.)": "to stop",
+  "art (l')": "art (the)",
+  "artiste (un/une)": "artist (an)",
+  "ascenseur (un)": "lift (a)",
+  "assistant/e $(un/une)$": "assistant (an)",
+  "assister (v.)": "to attend",
+  "association (une)": "association (an)",
+  "atelier (un)": "workshop (a)",
+  "au bout": "at the end",
+  "au revoir": "good-bye",
+  "aubergine (une)": "aubergine (an)",
+  "autoproduction (une)": "growing your own",
+  "autre (un/une)": "another",
+  "avenue (une)": "avenue (an)",
+  "avion (un)": "plane (a)/airplane (an)",
+  "avis (un)": "opinion (an)",
+  "avoir (v.)": "to have",
+  "avoir mal (v.)": "to be in pain",
+  "avril": "April",
+  "bac (le)": "a Level (the)",
+  "bague (une)": "ring (a)",
+  "baignoire (une)": "bath (a)",
+  "balade (une)": "walk/ride (a)",
+  "balcon (un)": "balcony (a)",
+  "banane (une)": "banana (a)",
+  "bande-annonce (une)": "trailer (a)",
+  "banque (la)": "bank (the)",
+  "bar (un)": "bar (a)",
+  "barquette (une)": "punnet/small container\n (a)",
+  "basket (le)": "basketball",
+  "baskets (des)": "trainers",
+  "bateau (un)": "boat (a)",
+  "beau/belle (adj.)": "beautiful/attractive/\n handsome",
+  "beaucoup de": "a lot of",
+  "bébé (un)": "baby (a)",
+  "beige (adj.)": "beige",
+  "beurre (le)": "butter (the)",
+  "bien": "good",
+  "bio (adj.)": "organic",
+  "bip sonore (un)": "beep (a)",
+  "blanc/blanche (adj).": "white",
+  "bleu(e) (adj.)": "blue",
+  "blond(e) (adj.)": "blond",
+  "blouson (un)": "bomber jacket (a)",
+  "bœuf (le)": "beef (the)",
+  "boire un verre (v.)": "to have a drink",
+  "boisson (une)": "drink (a)",
+  "boîte (une)": "tin (a)",
+  "bonjour": "hello",
+  "bonne journée": "good day",
+  "bonsoir": "good evening",
+  "bottes (des)": "boots (the)",
+  "bouche (la)": "mouth (the)",
+  "boucherie-charcuterie\n (une)": "butcher's shop-\n delicatessen (a)",
+  "boulangerie-pâtisserie\n (une)": "bakery-cake shop (a)",
+  "boulette d'agneau\n (une)": "lamb meatball (a)",
+  "boulevard (un)": "boulevard (a)",
+  "boulodrome (le)": "pétanque court (a)",
+  "bouteille (une)": "bottle (a)",
+  "boutique (une)": "boutique/shop (a)",
+  "bras (le)": "arm (the)",
+  "brun(e) (adj).": "brown",
+  "brunch (un)": "brunch (a)",
+  "bureau (un)": "office (an)",
+  "bus (le)": "bus (the)",
+  "but (un)": "aim/objective (an)",
+  "c'est par là": "it's that way/it's over\n there",
+  "cabillaud (le)": "cod (the)",
+  "cabine d'essayage\n (une)": "changing room (a)",
+  "café (un)": "coffee (a)",
+  "cahier (un)": "notebook (a)",
+  "caisse (la)": "till (a)",
+  "calme (adj.)": "quiet",
+  "canapé (un)": "sofa (a)",
+  "caractère (le)": "character (the)",
+  "carafe (une)": "carafe (a)",
+  "carotte (une)": "carrot (a)",
+  "carte (une)": "menu (a)",
+  "carte de visite (une)": "business card (a)",
+  "carte postale (la)": "postcard (a)",
+  "carte Vitale (la)": "state health insurance\n card (the)",
+  "casserole (une)": "saucepan (a)",
+  "cathédrale (une)": "cathedral (a)",
+  "cave (une)": "cellar (a)",
+  "CDI (un)": "permanent contract (a)",
+  "ceinture (une)": "belt (a)",
+  "centre commercial\n (un)": "shopping centre (a)",
+  "cerise (une)": "cherry (a)",
+  "c'est": "it is/this is/it's",
+  "chaise (une)": "chair (a)",
+  "chambre (une)": "bedroom (a)",
+  "chanson (une)": "song (a)",
+  "chanteur/euse (un\n une)": "singer (a)",
+  "chapeau (un)": "hat (a)",
+  "charge/e (un/une)": "Head (a)",
+  "château (un)": "castle/stately home (a)",
+  "chaud(e) (adj.)": "hot/warm",
+  "chauffage (le)": "heating (the)",
+  "chauffer (v.)": "to heat",
+  "chaussure (une)": "shoe (a)",
+  "chaussures à talons\n (des)": "high-heeled shoes\n (the)",
+  "chemin (un)": "path/track/way (a)",
+  "cheminée (une)": "fireplace (a)",
+  "chemise (une)": "shirt (a)",
+  "cher/chère (adj.)": "dear",
+  "chercher (v.)": "to look for",
+  "cheveux (les)": "hair (the)",
+  "chic": "chic",
+  "chimie (la)": "chemistry (the)",
+  "choisir (v.)": "to choose",
+  "choix (un)": "choice (a)",
+  "cinéma (le)": "cinema (the)",
+  "cinéphile (adj.)": "cinema-going",
+  "circulaire (adj.)": "circular",
+  "clair/e (adj.)": "light",
+  "classe (une)": "class (a)",
+  "client(e) (un/une)": "customer/client (a)",
+  "cocotte (une)": "casserole (a)",
+  "collectif(ve) (adj.)": "collective",
+  "collège (le)": "secondary school (the)",
+  "collègue (un/une)": "colleague (a)",
+  "commander (v.)": "to order",
+  "commentaire (un)": "comment (a)",
+  "commerce (un)": "shop/business (a)",
+  "commode (adj).": "convenient",
+  "communication (la)": "comms (the)",
+  "compost (le)": "compost (the)",
+  "comprendre (v.)": "to understand",
+  "concept (un)": "concept (a)",
+  "concours (un)": "competition (a)",
+  "condiment (un)": "seasoning (a)",
+  "confiture (la)": "jam (the)",
+  "confortable (adj.)": "comfortable",
+  "connaître (v.)": "to know",
+  "connaître quelqu'un\n (v.)": "to know someone",
+  "conseil (un)": "advice/piece of advice\n (a)",
+  "conseiller (v.)": "to advise",
+  "conservateur/trice (un/\n une)": "curator (a)",
+  "consulat (un)": "consulate (a)",
+  "consulter (v).": "to consult",
+  "contacter (v.)": "to contact",
+  "contenant (un)": "container (a)",
+  "continuer (v.)": "to continue",
+  "contrat (un)": "contract (a)",
+  "coordonnées (des)": "contact details (the)",
+  "copain/ine (un/une)": "friend/mate/chum (a)",
+  "cordialement": "sincerely",
+  "corps (le)": "body (the)",
+  "costume (un)": "suit (a)",
+  "cou (le)": "neck (the)",
+  "couper (v.)": "to cut",
+  "couple (un)": "couple (a)",
+  "courgette (une)": "courgette (a)",
+  "cours (une)": "lesson (a)",
+  "courses (les)": "shopping (the)",
+  "court(e) (adj.)": "short",
+  "cousin(e) (le/la)": "cousin (the)",
+  "couteau (un)": "knife (a)",
+  "crayon (un)": "pencil (a)",
+  "crèche (la)": "day nursery (the)",
+  "créer (v.)": "to create",
+  "crème (la)": "cream (the)",
+  "CTT (un)": "temporary contract (a)",
+  "cuillère (une)": "spoon (a)",
+  "cuillère à soupe (une)": "soup spoon (a)",
+  "cuisine (une)": "kitchen (a)",
+  "cuisinière (une)": "tablespoon (a)",
+  "cursus (un)": "course (a)",
+  "CV (un)": "CV (a)",
+  "d'abord": "first of all",
+  "dans": "in",
+  "danse (la)": "dance (the)",
+  "danser (v.)": "to dance",
+  "debout": "standing up",
+  "décembre": "December",
+  "décider (v.)": "to decide",
+  "décontracté(e) (adj.)": "casual",
+  "découvrir (v.)": "to discover",
+  "décrire (v.)": "to describe",
+  "déjeuner (v.)": "to lunch/to have\n breakfast",
+  "déjeuner (le)": "lunch (the)",
+  "délicieux/se (adj.)": "delicious",
+  "demain": "tomorrow",
+  "demande (une)": "application (an)",
+  "demande en mariage\n (une)": "marriage proposal (a)",
+  "demander (v.)": "to ask/to request",
+  "dent (une)": "tooth (a)",
+  "dentiste (un/une)": "dentist (a)",
+  "déplacement (un)": "journey/trip (a)",
+  "déposer (v.)": "to post",
+  "depuis": "since/from",
+  "derrière": "behind",
+  "descendre (v.)": "to descend/to come\n down",
+  "description (une)": "description (a)",
+  "désolé(e) (adj).": "sorry",
+  "dessert (un)": "dessert/pudding (a)",
+  "deuxième": "second",
+  "devant": "in front of",
+  "développement (le)": "development (the)",
+  "développer (v.)": "to develop",
+  "devoir (v.)": "to have to",
+  "dimanche": "Sunday",
+  "diner (le)": "dinner (the)",
+  "diner (v.)": "to dine/eat dinner",
+  "diplôme (un)": "qualification (a)",
+  "dire (v.)": "to say",
+  "dire au revoir (v.)": "to say goodbye",
+  "directeur/trice (un/\n une)": "Director (a)",
+  "direction (une)": "direction (a)",
+  "disponibilité (une)": "availability (an)/space\n or room available (a)",
+  "disponible (adj.)": "available",
+  "distributeur de billets\n (le)": "cash machine (the)",
+  "docteur(e) $(un/une)$": "doctor (a)",
+  "doctorat (un)": "doctorate (a)",
+  "don (un)": "fundraising platform\n (a)",
+  "donner son avis (v.)": "to give an opinion",
+  "donner un conseil": "to give advice",
+  "dormir (v.)": "to sleep (the)",
+  "dos (le)": "back (the)",
+  "douleur (la)": "pain (the)",
+  "dressing (un)": "dressing-room (a\n\n)",
+  "droit (le)": "law (the)",
+  "durée (une)": "duration (a)",
+  "eau ('1)": "water (the)",
+  "école (1')": "school",
+  "économie (1')": "economy (the)",
+  "écouter (v.)": "to listen",
+  "écran (un)": "screen (a)",
+  "écrire (v.)": "to write",
+  "écrivain(e)\n $(un/une)$": "writer (a)",
+  "éducation (1')": "education (the)",
+  "église (une)": "church (a)",
+  "électrique (adj).": "electric",
+  "élégant(e) (adj.)": "elegant",
+  "e-mail (un)": "email (an)",
+  "embellir (v.)": "to enhance",
+  "émotion (une)": "emotion (an)",
+  "enfants (les)": "children (the)",
+  "engrais (un)": "fertiliser (a)",
+  "entrée\n (une)": "starter (a)",
+  "entrée\n (une)": "hall (a)",
+  "entreprise\n (1')": "business (the)",
+  "environnement (1')": "environment (the)",
+  "envisager": "to envisage",
+  "éplucher (v.)": "to peel",
+  "équipé(e) (adj.)": "fully-equipped",
+  "essayer (v.)": "to try on",
+  "et": "and",
+  "étage (un)": "floor (a)",
+  "étagère (une)": "shelving unit (a)",
+  "être (v.)": "to be",
+  "être d'accord (v.)": "to agree with",
+  "être en forme (v.)": "to be fit",
+  "être en retard (v.)": "to be late",
+  "être libre": "to be free",
+  "étudiant(e) $(un/une)$": "student (a)",
+  "étudier (v.)": "to study",
+  "événement (un)": "event (an)",
+  "éviter (v.)": "to avoid",
+  "exceptionnel/le (adj.)": "outstanding",
+  "explication (une)": "explanation (an)",
+  "expliquer (v.)": "to explain",
+  "exposé(e) (adj.)": "facing",
+  "exposition (une)": "orientation",
+  "fac (la)": "uni (the)",
+  "faire (v.)": "to do/to make",
+  "faire beau (v.)": "to be fine",
+  "faire cuire (v.)": "to cook",
+  "faire la lessive": "to do the washing",
+  "faire la liste (v).": "to make a list",
+  "faire la sieste": "to have a nap",
+  "faire la vaisselle": "to do the washing-up",
+  "faire le ménage": "to do the housework",
+  "faire les courses": "to do the shopping",
+  "faire revenir (v.)": "to brown/to cook\n gently",
+  "falloir": "to have to/to need",
+  "famille (une)": "family (a)",
+  "fatigué(e) (adj.)": "tired",
+  "fauteuil (un)": "armchair (an)",
+  "fauteuil roulant (un)": "wheelchair (a)",
+  "fenêtre (une)": "window (a)",
+  "fermer (v.)": "to close",
+  "fête (une)": "party/fête/celebration\n (a)",
+  "février": "February",
+  "fiancé(e)\n $(un/u~ne)$": "fiancé(e) (a)",
+  "fiche de poste (une)": "job description (a)",
+  "fièvre (la)": "fever/temperature (a)",
+  "fille (la)": "girl/daughter (the)",
+  "film (un)": "film (a)",
+  "fils (le)": "son (the)",
+  "fixer un rendez-vous": "to make an\n appointment",
+  "formation (une)": "training course (a)",
+  "formel(le)": "formal/definite",
+  "formule (une)": "set meal/meal deal (a)",
+  "foulard (un)": "headscarf (a)",
+  "four (un)": "oven (an)",
+  "fourchette (une)": "fork (a)",
+  "fraise (une)": "strawberry (a)",
+  "français(e) (adj.)": "French",
+  "frère (le)": "brother (the)",
+  "froid(e) (adj.)": "cold",
+  "fromagerie (une)": "cheese shop (a)",
+  "fruit (un)": "fruit (a)",
+  "fumer (v.)": "to smoke",
+  "garçon (un)": "boy (a)",
+  "gare (une)": "railway station (a)",
+  "gare routière (la)": "coach/bus station\n (the)",
+  "gars (un)": "guy/bloke/boy (a)",
+  "gaspillage (le)": "waste (the)",
+  "gérer (v.)": "to manage",
+  "gestion (la)": "management (the)",
+  "gorge (la)": "throat (the)",
+  "gousse (une)": "clove (a)",
+  "grand magasin (un)": "department store (a)",
+  "grand(e) (adj.)": "large/tall",
+  "grand-mère (la)": "grandmother (the)",
+  "grand-père (le)": "grandfather (the)",
+  "grands-parents (les)": "grandparents (the)",
+  "gratuit(e) (adj.)": "free",
+  "grippe (une)": "flu (a bout of)",
+  "gris": "grey",
+  "guide (un/une)": "guide (a)",
+  "habiter": "to live in",
+  "haché(e) (adj.)": "minced/chopped",
+  "hacher (v.)": "to mince/to chop",
+  "heure (1')": "time/hour (the)",
+  "hôpital (1')": "hospital (the)",
+  "horaires (des)": "timetables",
+  "hôtel (un)": "hotel (a)",
+  "hôtel de ville ( ')": "town hall (the)",
+  "huile d'olive (l')": "olive oil (the)",
+  "hypermarché (un)": "hypermarket (a)",
+  "ici": "here",
+  "ilya": "there is/there are",
+  "immeuble (un)": "block of flats (a)",
+  "indispensable (adj.)": "essential",
+  "individuel(le) (adj.)": "individual/personal",
+  "infirmier(ère) (un/une)": "nurse (a)",
+  "information (une)": "information (a piece of)",
+  "informatique ( ')": "information technology\n (the)",
+  "informel(le)\n adj.)": "informal/casual",
+  "innovant/e (\n innovation (1')": "innovative\n\n innovation (the)",
+  "inscrire (v.)": "to note down",
+  "intéressant(e) (adj.)": "interesting",
+  "intérim (1')": "replacement (the)",
+  "invitation (une)": "invitation (an)",
+  "invité(e) (un/une)": "guest (a)",
+  "italien(ne) (adj).": "Italian",
+  "itinéraire (un)": "itinerary (an)/route (a)",
+  "jamais": "never",
+  "jambe (la)": "leg (the)",
+  "janvier": "January",
+  "japonais(e) (adj.)": "Japanese",
+  "jardin (un)": "garden (a)",
+  "jardin partagé (un)": "communal garden (a)",
+  "jardinage (le)": "gardening (the)",
+  "jardinier(ère) $(un/une)$": "gardener (a)",
+  "jaune": "yellow",
+  "jean (un)": "jeans (a pair of)",
+  "jeu (un)": "game (a)",
+  "jeudi": "Thursday",
+  "jogging (le)": "jogging",
+  "joli(e) (adj).": "pretty",
+  "jour (un)": "day (a)",
+  "journal (un)": "newspaper (a)",
+  "journée (la)": "day (the) whole",
+  "juillet": "July",
+  "juin": "June",
+  "jupe (une)": "skirt (a)",
+  "jus de fruits (un)": "fruit juice (a)",
+  "karaoké (le)": "karaoke (the)",
+  "là": "there",
+  "laisser (v.)": "to leave",
+  "lait (le)": "milk (the)",
+  "langue (une)": "language (a)",
+  "langues (les)": "languages (the)",
+  "laryngite (une)": "laryngitis (a bout of)",
+  "laurier (le)": "bay (the)",
+  "lavabo (un)": "washbasin (a)",
+  "lave-linge (un)": "washing machine (a)",
+  "lave-vaisselle (un)": "dishwasher (a)",
+  "légume (un)": "vegetable (a)",
+  "libre (adj.)": "free",
+  "licence (une)": "degree (a)",
+  "lieu (un)": "place (a)",
+  "limiter (v.)": "to limit",
+  "lire (v.)": "to read",
+  "liste (une)": "list (a)",
+  "lit (un)": "bed (a)",
+  "livre (un)": "book (a)",
+  "location (une)": "rented property (a)",
+  "logement (un)": "dwelling (a)",
+  "loin": "far",
+  "loisir (un)": "leisure activity (a)",
+  "loisirs (les)": "leisure activities (the)",
+  "long(ue) (adj.)": "long",
+  ")\n\nloyer (un": "rent (a)",
+  "lumineux/se (adj.)": "light-filled",
+  "lundi": "Monday",
+  "lunettes (des)": "glasses (the)",
+  "lycée (le)": "high school/sixth-form\n college (the)",
+  "madame": "Mrs.",
+  "magasin (un)": "shop/store (a)",
+  "magique (adj.)": "magic",
+  "magnifique (adj.)": "magnificent",
+  "mai": "May",
+  "main (la)\n": ")  hand (the",
+  "maintenant": "now",
+  "mairie (la)": "town hall (the)",
+  "mal de dos (un)": "backache (a)",
+  "maladie (une)": "illness (an)/disease (a)",
+  "management (le)": "management (the)",
+  "manger (v.)": "to eat",
+  "manifestation (une)": "event (an)",
+  "manteau (un)": "coat (a)",
+  "marche (la) > marcher": "walking (the)",
+  "marché (un)": "market (a)",
+  "marche (une)": "step (a)",
+  "mardi": "Tuesday",
+  "mariage (le)": "wedding (the)",
+  "marketing (le)": "marketing (the)",
+  "mars": "March",
+  "master (un\n\n)": "Masters (a)",
+  "matin (le)": "morning (the)",
+  "médecin (un)": "doctor (a)",
+  "médicament (un)": "medicine/drug (a)",
+  "mélanger (v.)": "to mix",
+  "melon (un)": "melon (a)",
+  "menu (un)": "menu (a)",
+  "merci": "thank you",
+  "mercredi": "Wednesday",
+  "mère (la)": "mother (the)",
+  "message vocal (un)": "voice message (a)",
+  "métro (le)": "underground/metro\n (the)",
+  "mettre ses\n chaussures (v.)": "to put his/her shoes on",
+  "meuble (un)": "piece of furniture (a)",
+  "meublé(e) (adj.)": "furnished",
+  "mexicain(e) (adj.)": "Mexican",
+  "midi": "midday",
+  "minuit": "midnight",
+  "mission (une)": "task (a)",
+  "mode (la)": "fashion (the)",
+  "moderne (adj).": "modern",
+  "monnaie virtuelle (une)": "virtual currency",
+  "monorail (le)": "monorail (the)",
+  "monsieur": "Mr.",
+  "montgolfière (une)": "hot-air balloon (a)",
+  "monument (un)": "monument (a)",
+  "motivé(e) (adj.)": "motivated",
+  "moule (un)": "cake tin (a)",
+  "moutarde (la)": "mustard (the)",
+  "mûr(e) (adj).": "ripe",
+  "muscu (lation (la)": "exercise/workout/\n body-building (the)",
+  "musée (un)": "museum (a)",
+  "musicien(ne) $(un/une)$": "musician (a)",
+  "naturel(le) (adj).": "natural",
+  "neiger (v.)": "to snow",
+  "nigérian(e) (adj.)": "Nigerian",
+  "noir(e) (adj.)": "black",
+  "nom (un)": "name/surname (a)",
+  "nord (le)": "north (the)",
+  "nourriture (la)": "food (the)",
+  "nouveau (nouvelle)\n (adj.)": "new",
+  "nouveau/elle\n $(un/une)$": "new colleague (a)",
+  "novembre": "November",
+  "nuageux/euse (adj.)": "cloudy",
+  "nuit (la)": "night (the)",
+  "nul(le) (adj).": "worthless/hopeless/\n useless",
+  "numéro de téléphone\n (un)": "telephone number(a)",
+  "objectif (un)": "aim/objective (an)",
+  "objet (un)": "object (an)",
+  "obtenir (v.)": "to obtain",
+  "octobre": "October",
+  "cœuf (un)": "egg (an)",
+  "office de tourisme ( ')": "tourist office (the)",
+  "officiel(le) (adj.)": "official",
+  "oignon (un)": "onion (an)",
+  "oncle (1 )": "uncle (the)",
+  "opéra (1')": "opera (the)",
+  "orange (adj).": "orange",
+  "ordinateur (un)": "computer (a)",
+  "ordonnance (une)": "prescription (a)",
+  "organiser (v.)": "to organise",
+  " ": "where",
+  "ouest ( ')": "west (the)",
+  "ouverture (une)": "opening (an)",
+  "ouvrir (v.)": "to open",
+  "pantalon (un)": "trousers (a pair of)",
+  "paquet (un)": "package/packet (a)",
+  "paracétamol (le)": "paracetamol (the)",
+  "parc (un)": "park (a)",
+  "parce que": "because",
+  "parcelle (une)": "plot (a)",
+  "pardon": "excuse me/sorry",
+  "parents (les)": "parents (the)",
+  "parfait(e) (adj.)": "perfect",
+  "parking (un)": "car park (a)",
+  "parler (v.)": "to speak/to talk",
+  "parquet (un)": "wood floor (a)",
+  "partager (v.)": "to share",
+  "partenariat (un)": "partnership (a)",
+  "pas de": "no/any",
+  "passion (une)": "passion (a)",
+  "passoire (une)": "colander/sieve (a)",
+  "pause (une)": "pause/break (a)",
+  "payer (v).": "to pay",
+  "pays (un)": "country (a)",
+  "peinture (la)": "paint (the)",
+  "peler (v.)": "to peel",
+  "père (le)": "father (the)",
+  "personne": "no-one",
+  "petit déjeuner (un)": "breakfast (a)",
+  "petit(e)": "small/short",
+  "petite-fille (la)": "granddaughter (the)",
+  "petit-fits (le)": "grandson (the)",
+  "petits-enfants (les)": "grandchildren (the)",
+  "pharmacie (une)": "pharmacy/chemist's\n shop (a)",
+  "pharmacien (ne) (un/\n une)": "pharmacist/chemist\n (a)",
+  "photo (la)": "photo (the)",
+  "physique (le\n\n)": "physical appearance\n (the)",
+  "pichet (un)": "jug (a)",
+  "pied (le)": "foot (the)",
+  "pion (un)": "counter (a)",
+  "pique-nique (un)": "picnic (a)",
+  "place (une)": "square (a)",
+  "place de parking (une)": "parking place (a)",
+  "placer (v.)": "to place",
+  "plaire (v.)": "to please",
+  "plan (un)": "plan (a)",
+  "planète (une)": "planet (a)",
+  "plantation (une)": "planting (a)",
+  "planter (v.)": "to plant",
+  "plastique (le)": "plastic (the)",
+  "plat (un)": "dish (a)",
+  "plate-forme (une)": "platform (a)",
+  "pleurer (v.)": "to cry",
+  "pleuvoir (v.)": "to rain",
+  "pneumologue $(un/une)$": "lung specialist (a)",
+  "poêle (une)": "frying pan (a)",
+  "poète(sse) $(un/une)$": "poet (a)",
+  "point cardinal (un)": "compass point (a)",
+  "poire (une)": "pear (a)",
+  "poisson (le)": "fish (the)",
+  "poissonnerie (une)": "fish shop (a)",
+  "poivre (le)": "pepper (the)",
+  "poivron (un)": "sweet pepper (a)",
+  "police (la)": "police (the)",
+  "poliment": "politely",
+  "polonais(e) (adj.)": "Polish",
+  "pomme (une)": "apple (an)",
+  "pomme de terre (une)": "potato (a)",
+  "port (un)": "port/harbour (a)",
+  "porter": "to wear",
+  "porter (un vêtement)": "to wear (an item of\n clothing)",
+  "possibilité (une)": "possibility (a)",
+  "poste (la)": "post office (the)",
+  "poste (un)": "post (a)",
+  "pot (un)": "pot/jar (a)",
+  "pour": "for/to",
+  "pourquoi": "why",
+  "pousser (v.)": "to grow",
+  "pouvoir (v.)": "to be able to do\n something",
+  "préférer (v.)": "to prefer",
+  "premier": "first",
+  "prendre (v.)": "to take",
+  "prendre congé (v.)": "to leave",
+  "prendre rendez-vous\n (v.)": "to make an\n appointment",
+  "prénom (un)": "first name (a)",
+  "président/e $(un/une)$": "Chairperson (a)",
+  "prêt (un)": "loan (a)",
+  "primeur (un)": "greengrocer (a)",
+  "privé(e) (adj.)": "private",
+  "prix (un)": "price (a)",
+  "prochain(e) (adj.)": "next",
+  "produit laitier (un)": "dairy product (a)",
+  "$(un/une)$\n professeur(e)": "teacher (a)",
+  "profession (une)": "profession (a)",
+  "profil (un)": "profile (a)",
+  "programme (un)": "programme (a)",
+  "projet (un)": "project (a)",
+  "promenade (une)": "walk (a)",
+  "promotion (une)": "promotion (a)",
+  "prononcer (v.)": "to pronounce",
+  "proposer (v.)": "to offer/suggest/\n\npropose",
+  "publier (v)": "to post",
+  "quartier (un)": "area (an)district//\n neighbourhood (a)",
+  "question (une)": "question (a)",
+  "quitter (v.)": "to leave",
+  "quotidien (le)": "everyday life (the)",
+  "quotidien (un)": "daily paper (a)",
+  "quotidien(ne) (adj.)": "daily",
+  "raconter (v.)": "to tell",
+  "randonnée (une)": "walk/hike (a)",
+  "ranger (v.)": "put away/tidy up",
+  "rappeler (v.)": "to call back/to remind",
+  "ratatouille (la)": "ratatouille (the)",
+  "réalisateur/trice (un/\n une)": "film director (a)",
+  "réalité virtuelle (la)": "virtual reality (the)",
+  "recette (une)": "recipe (a)",
+  "rechercher (v.)": "to look for",
+  "récit (un)": "account (an)/story (a)",
+  "réfrigérateur (un)": "refrigerator (a)",
+  "refuser (v.)": "to refuse",
+  "regarder (v.)": "to look at/to watch",
+  "remercier (v.)": "to thank",
+  "remplacer (v.)": "to replace",
+  "rendez-vous (un)": "appointment (an)/\n rendezvous (a)",
+  "renouvelable (adj.)": "renewable",
+  "renseigner (v.)": "to inform",
+  "rentrer chez soi (v.)": "to go home",
+  "repas (un)": "meal (a)",
+  "répéter (v.)": "to repeat",
+  "réponse (une)": "answer (an)",
+  "réseau (un)": "network (a)",
+  "réservez (v.)": "to book",
+  "respecter (v.)": "to respect",
+  "responsable (adj.)": "in charge",
+  "responsable (un/une)": "Head (a)",
+  "ressources humaines\n (les)": "human resources (the)",
+  "restaurant (un)": "restaurant (a)",
+  "retourner (v.)": "to return",
+  "réunion (une)": "meeting (a)",
+  "RH (relations\n humaines) (les)": "HR (human resources)\n (the)",
+  "rhinite (une)": "rhinitis (a bout of)",
+  "rhume (un)": "cold (a)",
+  "rien": "nothing",
+  "robe (une)": "dress (a)",
+  "rose (adj.)": "pink",
+  "rouge (adj).": "red",
+  "rue (une)": "street/road (a)",
+  "s'accroupir (v.)": "to squat/to crouch\n down",
+  "s'asseoir (v.)": "to sit down",
+  "s'excuser (v.)": "to apologise",
+  "s'habiller (v.)": "to get dressed",
+  "s'il vous plaît": "please",
+  "s'inscrire (v.)": "to register/to enrol",
+  "sac (un)": "bag (a)",
+  "salade (une)": "lettuce (a)",
+  "saladier (un)": "mixing bowl (a)",
+  "salaire (un)": "salary (a)",
+  "salle d'eau (une)": "shower room (a)",
+  "salle de bain (une)": "bathroom (a)",
+  "salle de cinéma (une)": "cinema (a)",
+  "salle de gym (la)": "gym (the)",
+  "salon (un)": "living room (a)",
+  "saluer (v.)": "to greet",
+  "salut": "hi!",
+  "samedi": "Saturday",
+  "sandales (des)": "sandals (the)",
+  "santé (la)": "health (the)",
+  "s'appeler (v.)": "to be called (name)/\n to call one another (by\n phone)",
+  "savoir (v.)": "to know",
+  "scénario (un)": "scenario (a)",
+  "sculpture (la)": "sculpture (the)",
+  "se composer (v.)": "to comprise",
+  "se coucher (v.)": "to lie down/to go to\n bed",
+  "se doucher (v.)": "to take a shower",
+  "se laver (v.)": "to wash yourself",
+  "se lever (v.)": "to get up",
+  "se loger (v.)": "to find accommodation",
+  "se marier (v.)": "to get married",
+  "se pencher (v.)": "to bend over/to lean\n forward",
+  "se présenter (v.)": "to introduce yourself",
+  "se reposer (v.)": "to rest",
+  "séjour (un)": "living room (a)",
+  "sel (le)": "salt (the)",
+  "sélectionner (v.)": "to choose",
+  "semaine (la)": "week (the)",
+  "septembre": "September",
+  "sérieux/sérieuse (adj.)": "serious",
+  "services (les)": "administrative\n services (the)",
+  "short (un)": "shorts (a pair of)",
+  "siège social (un)": "head office (a)",
+  "sieste (une)": "пар (а)",
+  "sirop (un)": "syrup (a)",
+  "smartphone (un)": "smartphone (a)",
+  "sœur (la)": "sister (the)",
+  "soir (le)": "evening (the)",
+  "soirée (une)": "evening out (an)",
+  "soleil (le)": "sun (the)",
+  "sortie (une)": "outing (an)",
+  "sortir (v.)": "to go out",
+  "souhaiter (v.)": "to wish",
+  "sous": "under",
+  "spécialité (une)": "speciality (a)",
+  "spectacle (un)": "show/spectacle (a)",
+  "spectateur/trice (un/e)": "viewer (a)/onlooker\n (an)/member of the\n audience (a)",
+  "sportif/sportive (adj.)": "athletic/competitive",
+  "stade (un)": "sports stadium (a)",
+  "stage (un)": "internship (an)",
+  "stagiaire (un/une)": "intern (an)",
+  "startup (une)": "startup (a)",
+  "station de métro (une)": "underground/metro\n station",
+  "station de tramway\n (une)": "tram stop (a)",
+  "station-service (une)": "service station/petrol\n station (a)",
+  "steak (un)": "steak (a)",
+  "stylo (un)": "pen (a)",
+  "sucre (le)": "sugar (the)",
+  "sud (le)": "south (the)",
+  "suisse (adj).": "Swiss",
+  "suivre (v.)": "to follow",
+  "super": "super/great",
+  "supermarché (un)": "supermarket (a)",
+  "sur": "on",
+  "surpris(e) (adj.)": "surprised",
+  "surprise (une)": "surprise (a)",
+  "sympa (adj.)": "nice",
+  "symptôme (un)": "symptom (a)",
+  "tabacologue $(un/une)$": "smoking cessation\n specialist (a)",
+  "table (une)": "table (a)",
+  "table basse (une)": "coffee table (a)",
+  "tableau (un)": "blackboard/\n whiteboard (a)",
+  "tablette (une)": "tablet (a)",
+  "taille (la)": "size (the)",
+  "tante (la)": "aunt (the)",
+  "taxi (un)": "taxi (a)",
+  "tee-shirt (un)": "tee-shirt (a)",
+  "télévision (la)": "television (the)",
+  "témoignage (un)": "testimony/statement\n (a)",
+  "temps (le)": "time/weather (the)",
+  "tennis (le)": "tennis/tennis court\n (the)",
+  "terrain (un)": "piece/plot of land (a)",
+  "terrasse (une)": "terrace/patio (a)",
+  "tête (la)": "head (the)",
+  "thé (un)": "tea (a cup of)",
+  "thym (le)": "thyme (the)",
+  "tirage (un)": "print run (a)",
+  "titre (un)": "title (a)",
+  "toilettes (les)": "toilets (the)",
+  "toilettes séparées\n (des)": "separate toilets",
+  "toit (un)": "roof (a)",
+  "tomate (une)": "tomato (a)",
+  "top (un)": "top (a)",
+  "tôt": "early",
+  "tourner (v.)": "to turn",
+  "tousser (v.)": "to cough",
+  "tout droit": "straight on",
+  "toux (la)": "cough (the)",
+  "traditionnel(le)\n (un)": "traditional",
+  "traitement (un)": "treatment (a)",
+  "train": "train (a)",
+  "tranquille (adj).": "quiet/peaceful",
+  "transport (un)": "transport (a means of)",
+  "travail (un)": "job (a)",
+  "travailler (v).": "to work",
+  "trek (un)": "trek (a)",
+  "très": "very",
+  "triste (adj).": "sad",
+  "troc (le)": "exchange (the)",
+  "troisième": "third",
+  "trombinoscope (un)": "photos of everyone",
+  "trop": "too",
+  "trottoir (un)": "pavement (a)",
+  "typique (adj.)": "typical",
+  "un peu de": "a little",
+  "ustensile (un)": "utensil (a)",
+  "utile (adj.)": "useful",
+  "utiliser (v).": "to use",
+  "vacances (des)": "holiday/holidays",
+  "valider (v).": "to validate",
+  "valise (une)": "suitcase (a)",
+  "végétalisation (la)": "planting (the)",
+  "vendeur/vendeuse\n (un/une)": "sales assistant (a)",
+  "vendredi": "Friday",
+  "venir (v.)": "to come",
+  "ventre (le)": "stomach (the)",
+  "vérifier (v.)": "to check",
+  "vert(e) (adj.)": "green",
+  "veste (une)": "jacket (a)",
+  "vêtement (un)": "item of clothing (an)",
+  "viande (la)": "meat (the)",
+  "ville (une)": "town (a)",
+  "vin (le)": "wine (the)",
+  "virus (un)": "virus (a)",
+  "visite (une)": "visit (a)",
+  "visiter (v.)": "to visit",
+  "visiteur/euse (adj.)": "visiting",
+  "voisin(e) (un/une)": "neighbour (a)",
+  "voiture (une)": "car (a)",
+  "vol (un)": "flight (a)",
+  "volcan (un)": "volcano (a)",
+  "vouloir (v.)": "to want to",
+  "voyage (un)": "voyage/journey/trip (a)",
+  "voyager": "to travel",
+  "week-end (le)": "weekend (the)",
+  "yeux (les)": "eyes (the)"
+};
+
+        let structuredList = [];
+        let filteredCards = [];
+        let currentCardIndex = 0;
+
+        // Quiz State Parameters
+        let quizPool = [];
+        let quizIndex = 0;
+        let quizCorrectCount = 0;
+        let quizTotalAnswered = 0;
+        let currentCorrectAnswer = "";
+
+        window.onload = function() {
+            buildAlphabetDropdowns();
+            initializeData(vocabData);
+        };
+
+        function initializeData(sourceObj) {
+            structuredList = Object.keys(sourceObj).map(key => {
+                return { french: key.trim(), english: sourceObj[key].trim() };
+            });
+            applyCardFilter();
+        }
+
+        function buildAlphabetDropdowns() {
+            const cardLetterSelect = document.getElementById('card-filter-letter');
+            const quizLetterSelect = document.getElementById('quiz-filter-letter');
+            
+            for(let i = 0; i < 26; i++) {
+                let char = String.fromCharCode(65 + i);
+                let opt1 = document.createElement('option');
+                let opt2 = document.createElement('option');
+                opt1.value = opt2.value = char.toLowerCase();
+                opt1.innerText = opt2.innerText = char;
+                cardLetterSelect.appendChild(opt1);
+                quizLetterSelect.appendChild(opt2);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-item').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+            
+            if(tabId === 'flashcards') {
+                document.getElementById('tab-flashcards').classList.add('active');
+                document.getElementById('flashcards-section').classList.add('active');
+                applyCardFilter();
+            } else if(tabId === 'quiz') {
+                document.getElementById('tab-quiz').classList.add('active');
+                document.getElementById('quiz-section').classList.add('active');
+                exitQuiz();
+            }
+        }
+
+        function getCleanStartingChar(str) {
+            // strip accents/symbols to identify base alphabetical character accurately
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/^[\W_]+/, "").toLowerCase().charAt(0);
+        }
+
+        /* Filter Algorithm */
+        function filterWords(list, targetLetter, condition) {
+            if (targetLetter === 'all') return [...list];
+            
+            return list.filter(item => {
+                let firstChar = getCleanStartingChar(item.french);
+                let isMatch = (firstChar === targetLetter);
+                return condition === 'equals' ? isMatch : !isMatch;
+            });
+        }
+
+        /* Flashcard Logic Interface */
+        function applyCardFilter() {
+            const letter = document.getElementById('card-filter-letter').value;
+            const condition = document.getElementById('card-filter-condition').value;
+            
+            filteredCards = filterWords(structuredList, letter, condition);
+            currentCardIndex = 0;
+            renderCard();
+        }
+
+        function renderCard() {
+            const container = document.getElementById('card-container-ui');
+            const emptyMsg = document.getElementById('card-empty-msg');
+            const el = document.getElementById('flashcard-element');
+            
+            if(filteredCards.length === 0) {
+                container.classList.add('hidden');
+                emptyMsg.classList.remove('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            emptyMsg.classList.add('hidden');
+            el.classList.remove('flipped');
+
+            const currentItem = filteredCards[currentCardIndex];
+            document.getElementById('card-front-text').innerText = currentItem.french;
+            document.getElementById('card-back-text').innerText = currentItem.english;
+            document.getElementById('card-counter').innerText = `${currentCardIndex + 1} of ${filteredCards.length}`;
+        }
+
+        function toggleCardFlip() {
+            document.getElementById('flashcard-element').classList.toggle('flipped');
+        }
+
+        function navigateCard(direction) {
+            if(filteredCards.length === 0) return;
+            currentCardIndex += direction;
+            if(currentCardIndex >= filteredCards.length) currentCardIndex = 0;
+            if(currentCardIndex < 0) currentCardIndex = filteredCards.length - 1;
+            renderCard();
+        }
+
+        /* Quiz Engine Logic */
+        function startQuiz() {
+            const letter = document.getElementById('quiz-filter-letter').value;
+            const condition = document.getElementById('quiz-filter-condition').value;
+            const sizeLimit = document.getElementById('quiz-size-limit').value;
+
+            let pool = filterWords(structuredList, letter, condition);
+
+            if(pool.length === 0) {
+                alert("No vocabulary words match your selected quiz configuration parameters.");
+                return;
+            }
+
+            // Shuffle matching list pool
+            pool.sort(() => Math.random() - 0.5);
+
+            if(sizeLimit !== 'unlimited') {
+                const limitNum = parseInt(sizeLimit, 10);
+                pool = pool.slice(0, limitNum);
+            }
+
+            quizPool = pool;
+            quizIndex = 0;
+            quizCorrectCount = 0;
+            quizTotalAnswered = 0;
+
+            document.getElementById('quiz-setup-ui').classList.add('hidden');
+            document.getElementById('quiz-play-ui').classList.remove('hidden');
+            
+            showQuizQuestion();
+        }
+
+       function showQuizQuestion() {
+    document.getElementById('quiz-next-btn').classList.add('hidden');
+    const item = quizPool[quizIndex];
+    
+    document.getElementById('quiz-progress').innerText = `Question ${quizIndex + 1} of ${quizPool.length}`;
+    updateScoreUI();
+
+    document.getElementById('quiz-question-text').innerText = `How do you say "${item.english}" in French?`;
+    currentCorrectAnswer = item.french;
+
+    // FIX: Generate wrong options strictly from the already-filtered quiz pool 
+    // instead of the master structuredList.
+    let answersPool = [item.french];
+    let optionsLeft = quizPool.filter(v => v.french !== item.french);
+    
+    // Randomize the valid distractors
+    optionsLeft.sort(() => Math.random() - 0.5);
+
+    // Fill up to 3 wrong options from the filtered pool
+    for(let i = 0; i < Math.min(3, optionsLeft.length); i++) {
+        answersPool.push(optionsLeft[i].french);
+    }
+    
+    // Shuffle the final options so the correct answer isn't always first
+    answersPool.sort(() => Math.random() - 0.5);
+
+    const optionsContainer = document.getElementById('quiz-options-container');
+    optionsContainer.innerHTML = '';
+
+    answersPool.forEach(choiceText => {
+        let btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = choiceText;
+        btn.onclick = function() { verifySelection(btn, choiceText); };
+        optionsContainer.appendChild(btn);
+    });
+}
+
+        function verifySelection(selectedBtn, chosenText) {
+            const options = document.querySelectorAll('#quiz-options-container .option-btn');
+            options.forEach(b => b.setAttribute('disabled', 'true'));
+
+            quizTotalAnswered++;
+            if(chosenText === currentCorrectAnswer) {
+                selectedBtn.classList.add('correct');
+                quizCorrectCount++;
+            } else {
+                selectedBtn.classList.add('wrong');
+                options.forEach(b => {
+                    if(b.innerText === currentCorrectAnswer) b.classList.add('correct');
+                });
+            }
+
+            updateScoreUI();
+            
+            if(quizIndex < quizPool.length - 1) {
+                document.getElementById('quiz-next-btn').classList.remove('hidden');
+            } else {
+                setTimeout(() => {
+                    alert(`Session End.\nScore: ${quizCorrectCount} / ${quizPool.length} answers correct.`);
+                    exitQuiz();
+                }, 1000);
+            }
+        }
+
+        function nextQuizQuestion() {
+            quizIndex++;
+            showQuizQuestion();
+        }
+
+        function updateScoreUI() {
+            let percentage = quizTotalAnswered === 0 ? 0 : Math.round((quizCorrectCount / quizTotalAnswered) * 100);
+            document.getElementById('quiz-score').innerText = `Score: ${quizCorrectCount} (${percentage}%)`;
+        }
+
+        function exitQuiz() {
+            document.getElementById('quiz-setup-ui').classList.remove('hidden');
+            document.getElementById('quiz-play-ui').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
